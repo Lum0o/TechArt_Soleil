@@ -14,7 +14,7 @@ class TECH_ART_SOLEIL_API ARock : public AActor
 	
 public:	
 	// Sets default values for this actor's properties
-	ARock() = default;
+	ARock();
 
 	void Throw(float ThrowForce);
 
@@ -22,10 +22,13 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY()
-	UProjectileMovementComponent* MovementComponent = nullptr;
-
 public:	
+	UPROPERTY(VisibleAnywhere)
+	UProjectileMovementComponent* MovementComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent* Mesh;
+	
 	// Whether the rock immediately gets destroyed upon making contact with a surface
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Parameters)
 	bool DestroyOnContact = false;

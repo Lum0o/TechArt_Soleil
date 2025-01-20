@@ -2,10 +2,17 @@
 
 
 #include "Rock.h"
+#include "Components/StaticMeshComponent.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 
-#include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetSystemLibrary.h"
-
+ARock::ARock()
+{
+	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
+	SetRootComponent(Mesh);
+	
+	MovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("MovementComponent"));
+	MovementComponent->Deactivate();
+}
 // Called when the game starts or when spawned
 void ARock::BeginPlay()
 {
@@ -14,9 +21,7 @@ void ARock::BeginPlay()
 
 void ARock::Throw(const float ThrowForce)
 {
-	UActorComponent* CreatedComponent = AddComponentByClass(UProjectileMovementComponent::StaticClass(), false, GetTransform(), false);
-    MovementComponent = Cast<UProjectileMovementComponent>(CreatedComponent);
-
+	MovementComponent->Activate();
     const FVector Force = GetActorForwardVector() * ThrowForce;
     MovementComponent->AddForce(Force);
 	UE_LOG(LogTemp, Display, TEXT("Rock : %f ; %f ; %f"), Force.X, Force.Y, Force.Z);
