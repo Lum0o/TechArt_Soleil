@@ -118,3 +118,6 @@ ApexLegends/Intermediate/*
 .idea/**/dynamic.xml
 .idea/**/uiDesigner.xml
 .idea/**/dbnavigator.xml
+
+Binaries/
+Plugins/Kdtree/
