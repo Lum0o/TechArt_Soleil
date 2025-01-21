@@ -58,7 +58,7 @@ public:
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
-	static constexpr size_t MaxNumberPropagationPoints = 10;
+	static constexpr size_t MaxNumberPropagationPoints = 40;
 
 	UPROPERTY(EditAnywhere)
 	UClass* MushroomClass;
@@ -132,5 +132,7 @@ private:
 	float FadeOutTimeRatio = 1.f;
 
 	bool IgnoreCollision = false;
+
+	bool isFoliageLoad = false;
 	
 };

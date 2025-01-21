@@ -23,6 +23,7 @@ FeaturePacks/*
 Engine/Documentation/*
 .git/*
 *.csprojAssemblyReference.cache
+Build/
 
 #Linux Debug Files
 *.sym

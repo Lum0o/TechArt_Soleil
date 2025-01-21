@@ -21,6 +21,9 @@ void ABioluminescentManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+
+	//Finding all materials in the scene and create a dynamic instance of them
+	//First the mushrooms
 	TArray<AActor*> Actors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), MushroomClass, Actors);
 	for (auto Actor : Actors)
@@ -32,6 +35,7 @@ void ABioluminescentManager::BeginPlay()
 			Materials.Add(StaticMesh->CreateDynamicMaterialInstance(i, StaticMesh->GetMaterial(i)));
 	}
 
+	//Then we are looking for the rocks
 	Actors.Empty();
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AStaticMeshActor::StaticClass(), Actors);
 	for (auto Actor : Actors)
@@ -43,6 +47,16 @@ void ABioluminescentManager::BeginPlay()
 			Materials.Add(StaticMesh->CreateDynamicMaterialInstance(i, StaticMesh->GetMaterial(i)));
 	}
 
+	//The Landscape
+	AActor* const Landscape = UGameplayStatics::GetActorOfClass(GetWorld(), ALandscape::StaticClass());
+	for (auto ULandscapeComponent : Cast<ALandscape>(Landscape)->LandscapeComponents)
+	{
+		ULandscapeComponent->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
+		for(int i = 0; i < ULandscapeComponent->GetNumMaterials(); i++)
+			Materials.Add(ULandscapeComponent->CreateDynamicMaterialInstance(i, ULandscapeComponent->GetMaterial(i)));
+	} 
+
+	//The foliage
 	AActor* const FoliageActor = UGameplayStatics::GetActorOfClass(GetWorld(), AInstancedFoliageActor::StaticClass());
 	
 	TArray<UFoliageInstancedStaticMeshComponent*> FoliageComponents;
@@ -55,7 +69,10 @@ void ABioluminescentManager::BeginPlay()
 		for(int i = 0; i < FoliageComponent->GetNumMaterials(); i++)
 			Materials.Add(FoliageComponent->CreateDynamicMaterialInstance(i, FoliageComponent->GetMaterial(i)));
 	}
-	
+
+	UE_LOG(LogTemp, Display, TEXT("FoliageCOmponents : %d"), FoliageComponents.Num());
+
+	//The Player
 	UGameplayStatics::GetPlayerPawn(GetWorld(), 0)->GetComponentByClass<UCapsuleComponent>()->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
 	
 	for (auto Material : Materials)
@@ -77,6 +94,9 @@ void ABioluminescentManager::Tick(const float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	AActor* const Landscape = UGameplayStatics::GetActorOfClass(GetWorld(), ALandscape::StaticClass());
+	//UE_LOG(LogTemp, Display, TEXT("Landscape : %d"),Cast<ALandscape>(Landscape)->LandscapeComponents[0]->IsGrassMapOutdated());
+	
 	if (Materials.Num() == 0)
 	{
 		// Don't want to do anything if the material isn't valid
@@ -109,7 +129,7 @@ void ABioluminescentManager::Tick(const float DeltaTime)
 				ProcessFadeOut(p, DeltaTime);
 		}
 
-		UE_LOG(LogTemp, Display, TEXT("Point %d: time : %f Stage : %lld (%f, %f, %f)"), i, p.TimeToSend, p.Stage, p.HitPoint.X, p.HitPoint.Y, p.HitPoint.Z);
+		//UE_LOG(LogTemp, Display, TEXT("Point %d: time : %f Stage : %lld (%f, %f, %f)"), i, p.TimeToSend, p.Stage, p.HitPoint.X, p.HitPoint.Y, p.HitPoint.Z);
 	}
 
 	// Send data to the textures
