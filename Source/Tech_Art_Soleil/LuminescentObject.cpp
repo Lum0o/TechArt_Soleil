@@ -41,6 +41,7 @@ void ALuminescentObject::BeginPlay()
 
 void ALuminescentObject::Tick(const float DeltaTime)
 {
+	UE_LOG(LogTemp, Display, TEXT("This shouldn't exist"));
 	Super::Tick(DeltaTime);
 
 	if (!Material)

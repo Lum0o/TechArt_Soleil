@@ -10,8 +10,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetRenderingLibrary.h"
-#include "Kismet/KismetSystemLibrary.h"
+#include "Runtime/Foliage/Public/InstancedFoliageActor.h"
 
+#pragma region Loading
 ABioluminescentManager::ABioluminescentManager()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -21,61 +22,14 @@ void ABioluminescentManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Find all the materials in the scene and create a dynamic instance of them
+	LoadMushrooms();
+	LoadRocks();
+	LoadLandscape();
+	LoadFoliage();
+	LoadPlayer();
 
-	//Finding all materials in the scene and create a dynamic instance of them
-	//First the mushrooms
-	TArray<AActor*> Actors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), MushroomClass, Actors);
-	for (auto Actor : Actors)
-	{
-		UStaticMeshComponent* StaticMesh = Actor->GetComponentByClass<UStaticMeshComponent>();
-		StaticMesh->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
-
-		for(int i = 0; i < StaticMesh->GetNumMaterials(); i++)
-			Materials.Add(StaticMesh->CreateDynamicMaterialInstance(i, StaticMesh->GetMaterial(i)));
-	}
-
-	//Then we are looking for the rocks
-	Actors.Empty();
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AStaticMeshActor::StaticClass(), Actors);
-	for (auto Actor : Actors)
-	{
-		UStaticMeshComponent* StaticMesh = Actor->GetComponentByClass<UStaticMeshComponent>();
-		StaticMesh->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
-
-		for(int i = 0; i < StaticMesh->GetNumMaterials(); i++)
-			Materials.Add(StaticMesh->CreateDynamicMaterialInstance(i, StaticMesh->GetMaterial(i)));
-	}
-
-	//The Landscape
-	AActor* const Landscape = UGameplayStatics::GetActorOfClass(GetWorld(), ALandscape::StaticClass());
-	for (auto ULandscapeComponent : Cast<ALandscape>(Landscape)->LandscapeComponents)
-	{
-		ULandscapeComponent->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
-		for(int i = 0; i < ULandscapeComponent->GetNumMaterials(); i++)
-			Materials.Add(ULandscapeComponent->CreateDynamicMaterialInstance(i, ULandscapeComponent->GetMaterial(i)));
-	} 
-
-	//The foliage
-	AActor* const FoliageActor = UGameplayStatics::GetActorOfClass(GetWorld(), AInstancedFoliageActor::StaticClass());
-	
-	TArray<UFoliageInstancedStaticMeshComponent*> FoliageComponents;
-	FoliageActor->GetComponents<UFoliageInstancedStaticMeshComponent>(FoliageComponents);
-
-	for (auto FoliageComponent : FoliageComponents)
-	{
-		FoliageComponent->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
-
-		for(int i = 0; i < FoliageComponent->GetNumMaterials(); i++)
-			Materials.Add(FoliageComponent->CreateDynamicMaterialInstance(i, FoliageComponent->GetMaterial(i)));
-	}
-
-	UE_LOG(LogTemp, Display, TEXT("FoliageCOmponents : %d"), FoliageComponents.Num());
-
-	//The Player
-	UGameplayStatics::GetPlayerPawn(GetWorld(), 0)->GetComponentByClass<UCapsuleComponent>()->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
-	
-	for (auto Material : Materials)
+	for (UMaterialInstanceDynamic* const Material : Materials)
 	{
 		// Set initial propagation speed value
 		Material->SetScalarParameterValue(TEXT("PropagationSpeed"), PropagationSpeed);
@@ -90,13 +44,74 @@ void ABioluminescentManager::BeginPlay()
 	SetupRenderTarget();
 }
 
+void ABioluminescentManager::LoadMushrooms()
+{
+	LoadActorType(MushroomClass);
+}
+
+void ABioluminescentManager::LoadRocks()
+{
+	LoadActorType(AStaticMeshActor::StaticClass());
+}
+
+void ABioluminescentManager::LoadLandscape()
+{
+	// The Landscape
+	AActor* const Landscape = UGameplayStatics::GetActorOfClass(GetWorld(), ALandscape::StaticClass());
+	const TArray<TObjectPtr<ULandscapeComponent>> Components = Cast<ALandscape>(Landscape)->LandscapeComponents;
+	for (const TObjectPtr<ULandscapeComponent> LandscapeComponent : Components)
+	{
+		LandscapeComponent->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
+		for (int32 i = 0; i < LandscapeComponent->GetNumMaterials(); i++)
+			Materials.Add(LandscapeComponent->CreateDynamicMaterialInstance(i, LandscapeComponent->GetMaterial(i)));
+	}
+}
+
+void ABioluminescentManager::LoadFoliage()
+{
+	const AActor* const FoliageActor = UGameplayStatics::GetActorOfClass(GetWorld(), AInstancedFoliageActor::StaticClass());
+	
+	TArray<UFoliageInstancedStaticMeshComponent*> FoliageComponents;
+	FoliageActor->GetComponents<UFoliageInstancedStaticMeshComponent>(FoliageComponents);
+
+	for (UFoliageInstancedStaticMeshComponent* const FoliageComponent : FoliageComponents)
+	{
+		FoliageComponent->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
+
+		for (int32 i = 0; i < FoliageComponent->GetNumMaterials(); i++)
+			Materials.Add(FoliageComponent->CreateDynamicMaterialInstance(i, FoliageComponent->GetMaterial(i)));
+	}
+}
+
+void ABioluminescentManager::LoadPlayer()
+{
+	// The Player
+	const APawn* const Player = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    UCapsuleComponent* const Collider = Player->GetComponentByClass<UCapsuleComponent>();
+	Collider->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
+}
+
+void ABioluminescentManager::LoadActorType(const TSubclassOf<AActor>& Class)
+{
+	TArray<AActor*> Actors;
+	// Get all actors of specified type
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), Class, Actors);
+	for (const AActor* const Actor : Actors)
+	{
+		UStaticMeshComponent* const StaticMesh = Actor->GetComponentByClass<UStaticMeshComponent>();
+		StaticMesh->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
+
+		// Instantiate each material of the mesh
+		for (int i = 0; i < StaticMesh->GetNumMaterials(); i++)
+			Materials.Add(StaticMesh->CreateDynamicMaterialInstance(i, StaticMesh->GetMaterial(i)));
+	}
+}
+#pragma endregion
+
 void ABioluminescentManager::Tick(const float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	AActor* const Landscape = UGameplayStatics::GetActorOfClass(GetWorld(), ALandscape::StaticClass());
-	//UE_LOG(LogTemp, Display, TEXT("Landscape : %d"),Cast<ALandscape>(Landscape)->LandscapeComponents[0]->IsGrassMapOutdated());
-	
 	if (Materials.Num() == 0)
 	{
 		// Don't want to do anything if the material isn't valid
@@ -136,7 +151,7 @@ void ABioluminescentManager::Tick(const float DeltaTime)
 	SendPointsToShader();
 	SendTimesToShader();
 
-	for (auto Material : Materials)
+	for (const auto Material : Materials)
 	{
 		Material->SetTextureParameterValue("PointsArray", PointsTexture);
 		Material->SetTextureParameterValue("TimesArray", TimesTexture);
@@ -155,8 +170,8 @@ void ABioluminescentManager::OnHit(
 		return;
 
 	UE_LOG(LogTemp, Display, TEXT("Hit"));
-	
-	FVector BodyPoint = Hit.Location;
+
+	const FVector BodyPoint = Hit.Location;
 
 	const float MaxRange = OtherActor->GetTransform().GetTranslation().Length() * IntensityRatio;
 	

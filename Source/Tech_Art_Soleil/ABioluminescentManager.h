@@ -6,7 +6,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/KismetRenderingLibrary.h"
-#include "Runtime/Foliage/Public/InstancedFoliageActor.h"
 #include "ABioluminescentManager.generated.h"
 
 /**
@@ -15,9 +14,8 @@
 UCLASS()
 class TECH_ART_SOLEIL_API ABioluminescentManager : public AActor
 {
-
 	GENERATED_BODY()
-private:
+
 	enum class EPropagationStage final : size_t
 	{
 		// No propagation currently active
@@ -52,7 +50,7 @@ private:
 
 public:
 	ABioluminescentManager();
-	
+
 	virtual void Tick(float DeltaTime) override;
 
 	UFUNCTION()
@@ -61,7 +59,7 @@ public:
 	static constexpr size_t MaxNumberPropagationPoints = 40;
 
 	UPROPERTY(EditAnywhere)
-	UClass* MushroomClass;
+	UClass* MushroomClass = nullptr;
 
 	// Ignores collision for a certain amount of time after one happened
 	UPROPERTY(EditAnywhere)
@@ -87,11 +85,14 @@ public:
 	UPROPERTY(EditAnywhere)
 	float FadeOutDuration = 1.f;
 
-	UPROPERTY(BlueprintReadWrite)
-	TArray<FVector> ConcernedVertices;
-
 private:
+	void LoadMushrooms();
+	void LoadRocks();
+	void LoadLandscape();
+	void LoadFoliage();
+	void LoadPlayer();
 
+	void LoadActorType(const TSubclassOf<AActor>& Class);
 	
 	void SetupRenderTarget();
 	void SendPointsToShader();
@@ -132,7 +133,4 @@ private:
 	float FadeOutTimeRatio = 1.f;
 
 	bool IgnoreCollision = false;
-
-	bool isFoliageLoad = false;
-	
 };
