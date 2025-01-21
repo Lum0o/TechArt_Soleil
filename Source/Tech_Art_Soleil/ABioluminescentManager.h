@@ -4,6 +4,7 @@
 #include <functional>
 
 #include "CoreMinimal.h"
+#include "Tech_Art_SoleilCharacter.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "ABioluminescentManager.generated.h"
@@ -98,6 +99,8 @@ private:
 	void SendPointsToShader();
 	void SendTimesToShader();
 	void SendToShader(UTextureRenderTarget2D* Texture, const std::function<FLinearColor(const FPropagationPointStatus&)>& Lambda);
+
+	void UpdatePlayerMovementCollision(float DeltaTime);
 	
 	void TryStartPropagation(const FVector& StartPoint, const float MaxRange);
 	void SetupPropagationPoint(const FVector& StartPoint, FPropagationPointStatus& Point, const float MaxRange) const;
@@ -110,6 +113,9 @@ private:
 
 	UPROPERTY()
 	TArray<UMaterialInstanceDynamic*> Materials = {};
+
+	UPROPERTY()
+	const UCharacterMovementComponent* PlayerMovement = nullptr;
 	
 	// Texture holding the points coordinates, this is sent to the shader
 	UPROPERTY()
@@ -133,4 +139,7 @@ private:
 	float FadeOutTimeRatio = 1.f;
 
 	bool IgnoreCollision = false;
+
+	// For how long the player has currently been moving
+	float PlayerMovementTimer = 0.f;
 };

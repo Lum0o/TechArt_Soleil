@@ -7,6 +7,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Engine/Canvas.h"
 #include "Engine/StaticMeshActor.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetRenderingLibrary.h"
@@ -89,6 +90,8 @@ void ABioluminescentManager::LoadPlayer()
 	const APawn* const Player = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
     UCapsuleComponent* const Collider = Player->GetComponentByClass<UCapsuleComponent>();
 	Collider->OnComponentHit.AddDynamic(this, &ABioluminescentManager::OnHit);
+
+	PlayerMovement = Cast<ATech_Art_SoleilCharacter>(Player)->GetCharacterMovement();
 }
 
 void ABioluminescentManager::LoadActorType(const TSubclassOf<AActor>& Class)
@@ -111,6 +114,8 @@ void ABioluminescentManager::LoadActorType(const TSubclassOf<AActor>& Class)
 void ABioluminescentManager::Tick(const float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	UpdatePlayerMovementCollision(DeltaTime);
 
 	if (Materials.Num() == 0)
 	{
@@ -169,12 +174,12 @@ void ABioluminescentManager::OnHit(
 	if (IgnoreCollision)
 		return;
 
-	UE_LOG(LogTemp, Display, TEXT("Hit"));
+	// UE_LOG(LogTemp, Display, TEXT("Hit"));
 
 	const FVector BodyPoint = Hit.Location;
 
 	const float MaxRange = OtherActor->GetTransform().GetTranslation().Length() * IntensityRatio;
-	
+
 	TryStartPropagation(BodyPoint, MaxRange);
 	IgnoreCollision = true;
 
@@ -238,6 +243,27 @@ void ABioluminescentManager::SendToShader(UTextureRenderTarget2D* const Texture,
 	}
 
 	UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(this, Context);
+}
+
+void ABioluminescentManager::UpdatePlayerMovementCollision(const float DeltaTime)
+{
+	const bool Airborne = !PlayerMovement->IsMovingOnGround();
+	const float Acceleration = PlayerMovement->GetCurrentAcceleration().SquaredLength();
+
+	if (Airborne || Acceleration <= 1.f)
+	{
+		PlayerMovementTimer = 0.f;
+		return;
+	}
+
+	PlayerMovementTimer += DeltaTime;
+
+	if (PlayerMovementTimer >= .5f)
+	{
+		// Hardcode 5k intensity, looks good
+		TryStartPropagation(PlayerMovement->GetActorLocation(), 5000.f);
+		PlayerMovementTimer = 0.f;
+	}
 }
 
 void ABioluminescentManager::TryStartPropagation(const FVector& StartPoint, const float MaxRange)
