@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "Engine/StaticMeshActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/GameplayStaticsTypes.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -55,12 +56,6 @@ ATech_Art_SoleilCharacter::ATech_Art_SoleilCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
-
-	static ConstructorHelpers::FClassFinder<ARock> RockClassFinder(TEXT("/Game/Content/Blueprints/BP_Rock"));
-
-	if (RockClassFinder.Class != nullptr)
-		RockClass = RockClassFinder.Class;
-
 }
 
 void ATech_Art_SoleilCharacter::BeginPlay()
@@ -99,7 +94,6 @@ void ATech_Art_SoleilCharacter::SetupPlayerInputComponent(UInputComponent* Playe
 
 		// Throw
 		EnhancedInputComponent->BindAction(ThrowAction, ETriggerEvent::Triggered, this, &ATech_Art_SoleilCharacter::Throw);
-		EnhancedInputComponent->BindAction(ThrowAction, ETriggerEvent::Ongoing, this, &ATech_Art_SoleilCharacter::PredictTrajectory);
 	}
 	else
 	{
@@ -145,39 +139,38 @@ void ATech_Art_SoleilCharacter::Look(const FInputActionValue& Value)
 
 void ATech_Art_SoleilCharacter::Throw(const FInputActionValue&)
 {
-	if (RockClass == nullptr)
+	if (RockMesh == nullptr)
 		return;
 
-	ARock* const Rock = GetWorld()->SpawnActor<ARock>(RockClass, GetThrowPosition(), Controller->GetControlRotation());
-	Rock->Throw(ThrowForce);
-}
+	const FTransform RockTransform = FTransform(
+		Controller->GetControlRotation(),
+		GetThrowPosition(),
+		FVector(0.3f)
+	);
 
-void ATech_Art_SoleilCharacter::PredictTrajectory(const FInputActionValue&)
-{
-	// const FVector Force = Controller->GetControlRotation().RotateVector(FVector::ForwardVector) * ThrowForce;
-	// // UE_LOG(LogTemp, Display, TEXT("Predict : %f ; %f ; %f"), Force.X, Force.Y, Force.Z);
-	// const FPredictProjectilePathParams PredictParams(1.f, GetThrowPosition(), Force, TrajectoryPredictionTime);
-	// FPredictProjectilePathResult Results;
-	// UGameplayStatics::PredictProjectilePath(GetWorld(), PredictParams, Results);
-	//
-	// // Destroy the previous points, if they existed
-	// for (AActor* const TrajectoryPoint : TrajectoryPoints)
-	// 	TrajectoryPoint->Destroy();
-	//
-	// // Empty out the list
-	// TrajectoryPoints.Empty();
-	//
-	// for (const FPredictProjectilePathPointData Point : Results.PathData)
-	// {
-	// 	const FVector Position = Point.Location;
-	// 	// const FRotator Rotation = UKismetMathLibrary::FindLookAtRotation(Position, Point.Velocity);
-	// 	const FRotator Rotation = FRotator::ZeroRotator;
-	//
-	// 	TrajectoryPoints.Add(GetWorld()->SpawnActor<AActor>(TrajectoryPointClass, Position, Rotation));
-	// }
+	AStaticMeshActor* const Rock = GetWorld()->SpawnActor<AStaticMeshActor>(
+		AStaticMeshActor::StaticClass(),
+		RockTransform
+	);
+
+	UStaticMeshComponent* const MeshComponent = Rock->GetStaticMeshComponent();
+	MeshComponent->SetMobility(EComponentMobility::Movable);
+	MeshComponent->SetStaticMesh(RockMesh);
+	MeshComponent->SetSimulatePhysics(true);
+	MeshComponent->SetCollisionProfileName("PhysicsActor");
+	MeshComponent->SetGenerateOverlapEvents(true);
+
+	FTimerHandle Handle;
+	GetWorldTimerManager().SetTimer(Handle, [Rock]()
+	{
+		Rock->Destroy();
+	}, 5.f, false);
+
+	const FVector Forward = Rock->GetActorForwardVector();
+	MeshComponent->AddImpulse(Forward * ThrowForce);
 }
 
 FVector ATech_Art_SoleilCharacter::GetThrowPosition() const
 {
-	return GetActorLocation() + GetActorForwardVector() * 50;
+	return GetActorLocation() + GetActorForwardVector() * 75 + FVector(0, 0, 50);
 }
