@@ -57,7 +57,7 @@ public:
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
-	static constexpr size_t MaxNumberPropagationPoints = 40;
+	static constexpr size_t MaxNumberPropagationPoints = 75;
 
 	UPROPERTY(EditAnywhere)
 	UClass* MushroomClass = nullptr;
