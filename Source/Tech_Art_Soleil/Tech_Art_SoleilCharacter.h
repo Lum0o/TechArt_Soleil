@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "InputActionValue.h"
-#include "Rock.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "Tech_Art_SoleilCharacter.generated.h"
@@ -19,7 +18,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 UCLASS(config=Game)
 class ATech_Art_SoleilCharacter : public ACharacter
-{
+{	
 	GENERATED_BODY()
 
 	/** Camera boom positioning the camera behind the character */
@@ -53,19 +52,10 @@ class ATech_Art_SoleilCharacter : public ACharacter
 protected:
 	// Force with which the rock will be thrown
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ThrowParameters)
-	float ThrowForce = 100000.f;
+	float ThrowForce = 1000.f;
 
-	// How long to predict the throw trajectory
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ThrowParameters)
-	float TrajectoryPredictionTime = 3.f;
-
-private:
-	TSubclassOf<ARock> RockClass;
-	TSubclassOf<AActor> TrajectoryPointClass;
-
-	// Holds the list of currently spawned trajectory points
-	UPROPERTY()
-	TArray<AActor*> TrajectoryPoints;
+	TObjectPtr<UStaticMesh> RockMesh;
 
 public:
 	ATech_Art_SoleilCharacter();
@@ -79,8 +69,6 @@ protected:
 
 	/** Called for throwing input */
 	void Throw(const FInputActionValue& Value);
-
-	void PredictTrajectory(const FInputActionValue& Value);
 
 	_NODISCARD FVector GetThrowPosition() const;
 
