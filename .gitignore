@@ -121,3 +121,5 @@ ApexLegends/Intermediate/*
 .idea/**/dbnavigator.xml
 
 Plugins/Kdtree/
+
+Binaries/Win64/Tech_Art_Soleil.exe
